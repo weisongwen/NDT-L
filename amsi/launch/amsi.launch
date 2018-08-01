@@ -1,0 +1,67 @@
+<!-- -->
+<launch>
+  <!-- arguments -->
+  <!-- send table.xml to param server -->
+  <arg name="use_gnss" default="1" />
+  <arg name="use_imu" default="false" />
+  <arg name="use_odom" default="false" />
+  <arg name="imu_upside_down" default="false" />
+  <arg name="queue_size" default="10" />
+  <arg name="offset" default="linear" />
+  <arg name="use_openmp" default="true" />
+  <arg name="get_height" default="false" />
+  <arg name="use_local_transform" default="false" />
+  <arg name="sync" default="false" />
+  <arg name="_localizer" default="velodyne" />
+  <arg name="imu_topic" default="/imu_raw" />
+  <arg name="bag_filename" default="/media/wenws/research_plus/space_for_linux/20180701/Jiulongtang/2018-07-01-20-28-42.bag" />
+  <arg name="nodelet_manager" default="velodyne_nodelet_manager" />
+
+  <!-- in case you use velodyne_driver, comment out the following line -->
+  <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
+  <!-- prefiltering_nodelet -->
+  <node pkg="nodelet" type="nodelet" name="prefiltering_nodelet" args="load hdl_graph_slam/PrefilteringNodelet $(arg nodelet_manager)">
+    <param name="use_distance_filter" value="true" />
+    <param name="distance_near_thresh" value="0.1" />
+    <param name="distance_far_thresh" value="500.0" />
+    <!-- NONE, VOXELGRID, or APPROX_VOXELGRID -->
+    <param name="downsample_method" value="VOXELGRID" />
+    <param name="downsample_resolution" value="0.1" />
+    <!-- NONE, RADIUS, or STATISTICAL -->
+    <param name="outlier_removal_method" value="RADIUS" />
+    <param name="statistical_mean_k" value="30" />
+    <param name="statistical_stddev" value="1.2" />
+    <param name="radius_radius" value="0.5" />
+    <param name="radius_min_neighbors" value="2" />
+  </node>
+  <!-- tf -->
+  <node pkg="tf" type="static_transform_publisher" name="world_to_map" args="0 0 0 0 0 0 /world /map 10" />
+  <node pkg="tf" type="static_transform_publisher" name="odom_to_map" args="0 0 0 0 0 0 /map /odom 10" />
+  <node pkg="tf" type="static_transform_publisher" name="velodyne_to_base" args="0 0 0 0 0 0 /base_link /velodyne_0 10" />
+  <node pkg="tf" type="static_transform_publisher" name="Baselink_to_localizaer" args="0 0 0 0 0 0 /base_link /localizer 10" />
+
+  <!-- globalmap_server_nodelet -->
+  <node pkg="amsi" type="map_loaderNode" name="map_loaderNode" output="screen">
+    <param name="globalmap_pcd" value="/media/wenws/research_plus/space_for_linux/20180701/Jiulongtang/2018-07-01-20-28-42.bag/020.pcd" />
+    <param name="downsample_resolution" value="0.1" />
+  </node>
+
+
+  <node pkg="amsi" type="amsi" name="amsi" output="screen">
+    <param name="use_gnss" value="$(arg use_gnss)" />
+    <param name="use_imu" value="$(arg use_imu)" />
+    <param name="use_odom" value="$(arg use_odom)" />
+    <param name="imu_upside_down" value="$(arg imu_upside_down)" />
+    <param name="queue_size" value="$(arg queue_size)" />
+    <param name="offset" value="$(arg offset)" />
+    <param name="use_openmp" value="$(arg use_openmp)" />
+    <param name="get_height" value="$(arg get_height)" />
+    <param name="use_local_transform" value="$(arg use_local_transform)" />
+    <param name="imu_topic" value="$(arg imu_topic)" />
+    <param name="_localizer" value="$(arg _localizer)" />
+    <remap from="/points_raw" to="/sync_drivers/points_raw" if="$(arg sync)" />
+  </node>
+
+  <!-- <node name="playbag" pkg="rosbag" type="play" args="clock  delay 5 $(arg bag_filename)" /> -->
+  
+</launch>
